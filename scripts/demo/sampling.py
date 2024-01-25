@@ -143,18 +143,28 @@ def run_txt2img(
 
     if st.button("Sample"):
         st.write(f"**Model I:** {version}")
+        st.write(f"**Sampler:**" {sampler})
+        st.write(f"**(H, W, C, F) =** ({H}, {W}, {C}, {F})")
+        st.write(f"**value_dict:** " + '\n'.join([f"  **{k}:** [{v}]" for k, v in value_dict.items()]))
         out = do_sample(
-            state["model"],
-            sampler,
-            value_dict,
-            num_samples,
-            H,
-            W,
-            C,
-            F,
+            state["model"],             # model,
+            sampler,                    # sampler,
+            value_dict,                 # value_dict,
+            num_samples,                # num_samples,
+            H,                          # H,
+            W,                          # W,
+            C,                          # C,
+            F,                          # F,
             force_uc_zero_embeddings=["txt"] if not is_legacy else [],
+                        # force_uc_zero_embeddings: Optional[List] = None,
+            # force_cond_zero_embeddings: Optional[List] = None,
+            # batch2model_input: List = None,
             return_latents=return_latents,
-            filter=filter,
+                                        # return_latents=False,
+            filter=filter,              # filter=None,
+            # T=None,
+            # additional_batch_uc_fields=None,
+            # decoding_t=None,
         )
         return out
 
