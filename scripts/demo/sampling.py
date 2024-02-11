@@ -369,6 +369,8 @@ if __name__ == "__main__":
         if not finish_denoising:
             stage2strength = None
 
+    prompt_logger = None
+    
     if mode == "txt2img":
         prompt_logger = PromptLogger()
         out: Optional[torch.Tensor] = run_txt2img(
