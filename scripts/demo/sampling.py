@@ -149,6 +149,7 @@ def run_txt2img(
         logger.append(f"**Model I:** {version}")
         logger.append(f"**Sampler:** {sampler}")
         logger.append(f"**(H, W, C, F) =** ({H}, {W}, {C}, {F})")
+        logger.append(f"return_latents={return_latents}")
         logger.append(f"**value_dict:** " + '\n'.join([f"  **{k}:** [{v}]" for k, v in value_dict.items()]))
         st.write(logger.get_log_newlines())
 
@@ -357,6 +358,9 @@ if __name__ == "__main__":
         out = None
     else:
         raise ValueError(f"unknown mode {mode}")
+    
+    st.write(f"type(out)={type(out)}")
+    
     if isinstance(out, (tuple, list)):
         samples, samples_z = out
     else:
