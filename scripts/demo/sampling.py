@@ -1,6 +1,7 @@
 from pytorch_lightning import seed_everything
 
 from scripts.demo.streamlit_helpers import *
+from scripts.util.logger import PromptLogger
 
 SAVE_PATH = "outputs/demo/txt2img/"
 
@@ -142,10 +143,15 @@ def run_txt2img(
     num_samples = num_rows * num_cols
 
     if st.button("Sample"):
-        st.write(f"**Model I:** {version}")
-        st.write(f"**Sampler:**" {sampler})
-        st.write(f"**(H, W, C, F) =** ({H}, {W}, {C}, {F})")
-        st.write(f"**value_dict:** " + '\n'.join([f"  **{k}:** [{v}]" for k, v in value_dict.items()]))
+
+        # プロンプト記録用
+        logger = PromptLogger()
+        logger.append(f"**Model I:** {version}")
+        logger.append(f"**Sampler:** {sampler}")
+        logger.append(f"**(H, W, C, F) =** ({H}, {W}, {C}, {F})")
+        logger.append(f"**value_dict:** " + '\n'.join([f"  **{k}:** [{v}]" for k, v in value_dict.items()]))
+        st.write(logger.get_log_newlines())
+
         out = do_sample(
             state["model"],             # model,
             sampler,                    # sampler,
