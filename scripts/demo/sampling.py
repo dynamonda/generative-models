@@ -267,7 +267,16 @@ def apply_refiner(
 
 
 if __name__ == "__main__":
+    # Title
     st.title("Stable Diffusion")
+
+    # Section1
+    #
+    # * ModelVersion
+    # * LoadModel
+    # * Mode:
+    #   * txt2img, img2img
+    #
     version = st.selectbox("Model Version", list(VERSION2SPECS.keys()), 0)
     version_dict = VERSION2SPECS[version]
     if st.checkbox("Load Model"):
@@ -276,6 +285,11 @@ if __name__ == "__main__":
         mode = "skip"
     st.write("__________________________")
 
+    # Section2
+    #
+    # * Low vram mode
+    # * Load SDXL-refiner?
+    #
     set_lowvram_mode(st.checkbox("Low vram mode", True))
 
     if version.startswith("SDXL-base"):
@@ -284,6 +298,11 @@ if __name__ == "__main__":
     else:
         add_pipeline = False
 
+    # SideBar
+    #
+    # * seed
+    # * Save images locally
+    #
     seed = st.sidebar.number_input("seed", value=42, min_value=0, max_value=int(1e9))
     seed_everything(seed)
 
@@ -358,9 +377,9 @@ if __name__ == "__main__":
         out = None
     else:
         raise ValueError(f"unknown mode {mode}")
-    
+
     st.write(f"type(out)={type(out)}")
-    
+
     if isinstance(out, (tuple, list)):
         samples, samples_z = out
     else:

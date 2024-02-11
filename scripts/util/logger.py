@@ -10,5 +10,5 @@ class PromptLogger():
 
     def get_log_newlines(self) -> str:
         """改行文字で結合したログ内容を返す"""
-        return '\n'.join(self)
+        return '\n'.join(self.message_list)
     
