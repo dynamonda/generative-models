@@ -1,5 +1,3 @@
-import logger
-
 class PromptLogger():
     """プロンプト等様々な情報を記録・出力するロガー"""
     def __init__(self) -> None:
