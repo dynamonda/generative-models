@@ -491,7 +491,13 @@ def do_sample(
     T=None,
     additional_batch_uc_fields=None,
     decoding_t=None,
+    prompt_logger=None,
 ):
+    """
+    args:
+        return_latents: bool :
+        T                    : (memo)related cuda ?
+    """
     force_uc_zero_embeddings = default(force_uc_zero_embeddings, [])
     batch2model_input = default(batch2model_input, [])
     additional_batch_uc_fields = default(additional_batch_uc_fields, [])
