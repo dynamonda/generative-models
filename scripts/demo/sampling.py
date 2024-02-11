@@ -3,6 +3,8 @@ from pytorch_lightning import seed_everything
 from scripts.demo.streamlit_helpers import *
 from scripts.util.logger import PromptLogger
 
+from typing import Optional, Tuple
+
 SAVE_PATH = "outputs/demo/txt2img/"
 
 SD_XL_BASE_RATIOS = {
@@ -118,12 +120,20 @@ def run_txt2img(
     return_latents=False,
     filter=None,
     stage2strength=None,
-):
+    prompt_logger: PromptLogger = None,
+) -> Optional[torch.Tensor]:
+    """
+    returns:
+        Optional[torch.Tensor]: Image
+    """
     if version.startswith("SDXL-base"):
-        W, H = st.selectbox("Resolution:", list(SD_XL_BASE_RATIOS.values()), 10)
+        W, H = st.selectbox("Resolution:", list(
+            SD_XL_BASE_RATIOS.values()), 10)
     else:
-        H = st.number_input("H", value=version_dict["H"], min_value=64, max_value=2048)
-        W = st.number_input("W", value=version_dict["W"], min_value=64, max_value=2048)
+        H = st.number_input(
+            "H", value=version_dict["H"], min_value=64, max_value=2048)
+        W = st.number_input(
+            "W", value=version_dict["W"], min_value=64, max_value=2048)
     C = version_dict["C"]
     F = version_dict["f"]
 
@@ -142,16 +152,19 @@ def run_txt2img(
     sampler, num_rows, num_cols = init_sampling(stage2strength=stage2strength)
     num_samples = num_rows * num_cols
 
+    # push "Sample" button
     if st.button("Sample"):
 
-        # プロンプト記録用
-        logger = PromptLogger()
-        logger.append(f"**Model I:** {version}")
-        logger.append(f"**Sampler:** {sampler}")
-        logger.append(f"**(H, W, C, F) =** ({H}, {W}, {C}, {F})")
-        logger.append(f"return_latents={return_latents}")
-        logger.append(f"**value_dict:** " + '\n'.join([f"  **{k}:** [{v}]" for k, v in value_dict.items()]))
-        st.write(logger.get_log_newlines())
+        # プロンプト記録
+        if prompt_logger:
+            prompt_logger = PromptLogger()
+            prompt_logger.append(f"**Model I:** {version}")
+            prompt_logger.append(f"**Sampler:** {sampler}")
+            prompt_logger.append(f"**(H, W, C, F) =** ({H}, {W}, {C}, {F})")
+            prompt_logger.append(f"return_latents={return_latents}")
+            prompt_logger.append(
+                f"**value_dict:** " + '\n'.join([f"  **{k}:** [{v}]" for k, v in value_dict.items()]))
+            st.write(prompt_logger.get_log_newlines())
 
         out = do_sample(
             state["model"],             # model,
@@ -163,11 +176,11 @@ def run_txt2img(
             C,                          # C,
             F,                          # F,
             force_uc_zero_embeddings=["txt"] if not is_legacy else [],
-                        # force_uc_zero_embeddings: Optional[List] = None,
+            # force_uc_zero_embeddings: Optional[List] = None,
             # force_cond_zero_embeddings: Optional[List] = None,
             # batch2model_input: List = None,
             return_latents=return_latents,
-                                        # return_latents=False,
+            # return_latents=False,
             filter=filter,              # filter=None,
             # T=None,
             # additional_batch_uc_fields=None,
@@ -303,10 +316,12 @@ if __name__ == "__main__":
     # * seed
     # * Save images locally
     #
-    seed = st.sidebar.number_input("seed", value=42, min_value=0, max_value=int(1e9))
+    seed = st.sidebar.number_input(
+        "seed", value=42, min_value=0, max_value=int(1e9))
     seed_everything(seed)
 
-    save_locally, save_path = init_save_locally(os.path.join(SAVE_PATH, version))
+    save_locally, save_path = init_save_locally(
+        os.path.join(SAVE_PATH, version))
 
     if mode != "skip":
         state = init_st(version_dict, load_filter=True)
@@ -330,7 +345,8 @@ if __name__ == "__main__":
 
     if add_pipeline:
         st.write("__________________________")
-        version2 = st.selectbox("Refiner:", ["SDXL-refiner-1.0", "SDXL-refiner-0.9"])
+        version2 = st.selectbox(
+            "Refiner:", ["SDXL-refiner-1.0", "SDXL-refiner-0.9"])
         st.warning(
             f"Running with {version2} as the second stage model. Make sure to provide (V)RAM :) "
         )
@@ -355,7 +371,8 @@ if __name__ == "__main__":
             stage2strength = None
 
     if mode == "txt2img":
-        out = run_txt2img(
+        prompt_logger = PromptLogger()
+        out: Optional[torch.Tensor] = run_txt2img(
             state,
             version,
             version_dict,
@@ -363,6 +380,7 @@ if __name__ == "__main__":
             return_latents=add_pipeline,
             filter=state.get("filter"),
             stage2strength=stage2strength,
+            prompt_logger=prompt_logger,
         )
     elif mode == "img2img":
         out = run_img2img(
@@ -400,4 +418,4 @@ if __name__ == "__main__":
         )
 
     if save_locally and samples is not None:
-        perform_save_locally(save_path, samples)
+        perform_save_locally(save_path, samples, prompt_logger=prompt_logger)

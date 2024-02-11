@@ -34,6 +34,8 @@ from sgm.modules.diffusionmodules.sampling import (DPMPP2MSampler,
                                                    LinearMultistepSampler)
 from sgm.util import append_dims, default, instantiate_from_config
 
+from scripts.util.logger import PromptLogger
+
 
 @st.cache_resource()
 def init_st(version_dict, load_ckpt=True, load_filter=True):
@@ -43,7 +45,8 @@ def init_st(version_dict, load_ckpt=True, load_filter=True):
         ckpt = version_dict["ckpt"]
 
         config = OmegaConf.load(config)
-        model, msg = load_model_from_config(config, ckpt if load_ckpt else None)
+        model, msg = load_model_from_config(
+            config, ckpt if load_ckpt else None)
 
         state["msg"] = msg
         state["model"] = model
@@ -154,8 +157,10 @@ def init_embedder_options(keys, init_dict, prompt=None, negative_prompt=None):
             value_dict["orig_height"] = orig_height
 
         if key == "crop_coords_top_left":
-            crop_coord_top = st.number_input("crop_coords_top", value=0, min_value=0)
-            crop_coord_left = st.number_input("crop_coords_left", value=0, min_value=0)
+            crop_coord_top = st.number_input(
+                "crop_coords_top", value=0, min_value=0)
+            crop_coord_left = st.number_input(
+                "crop_coords_left", value=0, min_value=0)
 
             value_dict["crop_coords_top"] = crop_coord_top
             value_dict["crop_coords_left"] = crop_coord_left
@@ -193,22 +198,31 @@ def init_embedder_options(keys, init_dict, prompt=None, negative_prompt=None):
     return value_dict
 
 
-def perform_save_locally(save_path, samples):
+def perform_save_locally(save_path, samples, prompt_logger: PromptLogger = None):
+    """ローカルファイルとして保存する"""
     os.makedirs(os.path.join(save_path), exist_ok=True)
     base_count = len(os.listdir(os.path.join(save_path)))
+    base_count_str: str = f"{base_count:09}"
     samples = embed_watermark(samples)
     for sample in samples:
         sample = 255.0 * rearrange(sample.cpu().numpy(), "c h w -> h w c")
+        # save image
         Image.fromarray(sample.astype(np.uint8)).save(
-            os.path.join(save_path, f"{base_count:09}.png")
+            os.path.join(save_path, base_count_str + '.png')
         )
+        # save logs
+        if prompt_logger:
+            with open(os.path.join(save_path, base_count_str + '.log'), 'w') as f:
+                f.write(prompt_logger.get_log_newlines())
+
         base_count += 1
 
 
 def init_save_locally(_dir, init_value: bool = False):
     save_locally = st.sidebar.checkbox("Save images locally", value=init_value)
     if save_locally:
-        save_path = st.text_input("Save path", value=os.path.join(_dir, "samples"))
+        save_path = st.text_input(
+            "Save path", value=os.path.join(_dir, "samples"))
     else:
         save_path = None
 
@@ -312,11 +326,13 @@ def init_sampling(
         options.get("discretization", 0),
     )
 
-    discretization_config = get_discretization(discretization, options=options, key=key)
+    discretization_config = get_discretization(
+        discretization, options=options, key=key)
 
     guider_config = get_guider(options=options, key=key)
 
-    sampler = get_sampler(sampler, steps, discretization_config, guider_config, key=key)
+    sampler = get_sampler(
+        sampler, steps, discretization_config, guider_config, key=key)
     if img2img_strength is not None:
         st.warning(
             f"Wrapping {sampler.__class__.__name__} with Img2ImgDiscretizationWrapper"
@@ -358,10 +374,14 @@ def get_discretization(discretization, options, key=1):
 
 def get_sampler(sampler_name, steps, discretization_config, guider_config, key=1):
     if sampler_name == "EulerEDMSampler" or sampler_name == "HeunEDMSampler":
-        s_churn = st.sidebar.number_input(f"s_churn #{key}", value=0.0, min_value=0.0)
-        s_tmin = st.sidebar.number_input(f"s_tmin #{key}", value=0.0, min_value=0.0)
-        s_tmax = st.sidebar.number_input(f"s_tmax #{key}", value=999.0, min_value=0.0)
-        s_noise = st.sidebar.number_input(f"s_noise #{key}", value=1.0, min_value=0.0)
+        s_churn = st.sidebar.number_input(
+            f"s_churn #{key}", value=0.0, min_value=0.0)
+        s_tmin = st.sidebar.number_input(
+            f"s_tmin #{key}", value=0.0, min_value=0.0)
+        s_tmax = st.sidebar.number_input(
+            f"s_tmax #{key}", value=999.0, min_value=0.0)
+        s_noise = st.sidebar.number_input(
+            f"s_noise #{key}", value=1.0, min_value=0.0)
 
         if sampler_name == "EulerEDMSampler":
             sampler = EulerEDMSampler(
@@ -464,7 +484,8 @@ def load_img(
 
     transform = transforms.Compose(transform)
     img = transform(image)[None, ...]
-    st.text(f"input min/max/mean: {img.min():.3f}/{img.max():.3f}/{img.mean():.3f}")
+    st.text(
+        f"input min/max/mean: {img.min():.3f}/{img.max():.3f}/{img.mean():.3f}")
     return img
 
 
@@ -516,7 +537,8 @@ def do_sample(
 
                 load_model(model.conditioner)
                 batch, batch_uc = get_batch(
-                    get_unique_embedder_keys_from_conditioner(model.conditioner),
+                    get_unique_embedder_keys_from_conditioner(
+                        model.conditioner),
                     value_dict,
                     num_samples,
                     T=T,
@@ -534,7 +556,8 @@ def do_sample(
                 for k in c:
                     if not k == "crossattn":
                         c[k], uc[k] = map(
-                            lambda y: y[k][: math.prod(num_samples)].to("cuda"), (c, uc)
+                            lambda y: y[k][: math.prod(num_samples)].to(
+                                "cuda"), (c, uc)
                         )
                     if k in ["crossattn", "concat"] and T is not None:
                         uc[k] = repeat(uc[k], "b ... -> b t ...", t=T)
@@ -548,7 +571,8 @@ def do_sample(
                         assert T is not None
 
                         if isinstance(
-                            sampler.guider, (VanillaCFG, LinearPredictionGuider)
+                            sampler.guider, (VanillaCFG,
+                                             LinearPredictionGuider)
                         ):
                             additional_model_inputs[k] = torch.zeros(
                                 num_samples[0] * 2, num_samples[1]
@@ -579,7 +603,8 @@ def do_sample(
                     decoding_t  # Decode n frames at a time
                 )
                 samples_x = model.decode_first_stage(samples_z)
-                samples = torch.clamp((samples_x + 1.0) / 2.0, min=0.0, max=1.0)
+                samples = torch.clamp(
+                    (samples_x + 1.0) / 2.0, min=0.0, max=1.0)
                 unload_model(model.first_stage_model)
 
                 if filter is not None:
@@ -590,9 +615,11 @@ def do_sample(
                     grid = rearrange(grid, "n b c h w -> (n h) (b w) c")
                     outputs.image(grid.cpu().numpy())
                 else:
-                    as_vids = rearrange(samples, "(b t) c h w -> b t c h w", t=T)
+                    as_vids = rearrange(
+                        samples, "(b t) c h w -> b t c h w", t=T)
                     for i, vid in enumerate(as_vids):
-                        grid = rearrange(make_grid(vid, nrow=4), "c h w -> h w c")
+                        grid = rearrange(
+                            make_grid(vid, nrow=4), "c h w -> h w c")
                         st.image(
                             grid.cpu().numpy(),
                             f"Sample #{i} as image",
@@ -624,7 +651,8 @@ def get_batch(
 
         elif key == "original_size_as_tuple":
             batch["original_size_as_tuple"] = (
-                torch.tensor([value_dict["orig_height"], value_dict["orig_width"]])
+                torch.tensor([value_dict["orig_height"],
+                             value_dict["orig_width"]])
                 .to(device)
                 .repeat(math.prod(N), 1)
             )
@@ -650,17 +678,20 @@ def get_batch(
 
         elif key == "target_size_as_tuple":
             batch["target_size_as_tuple"] = (
-                torch.tensor([value_dict["target_height"], value_dict["target_width"]])
+                torch.tensor([value_dict["target_height"],
+                             value_dict["target_width"]])
                 .to(device)
                 .repeat(math.prod(N), 1)
             )
         elif key == "fps":
             batch[key] = (
-                torch.tensor([value_dict["fps"]]).to(device).repeat(math.prod(N))
+                torch.tensor([value_dict["fps"]]).to(
+                    device).repeat(math.prod(N))
             )
         elif key == "fps_id":
             batch[key] = (
-                torch.tensor([value_dict["fps_id"]]).to(device).repeat(math.prod(N))
+                torch.tensor([value_dict["fps_id"]]).to(
+                    device).repeat(math.prod(N))
             )
         elif key == "motion_bucket_id":
             batch[key] = (
@@ -679,7 +710,8 @@ def get_batch(
                 b=math.prod(N),
             )
         elif key == "cond_frames":
-            batch[key] = repeat(value_dict["cond_frames"], "1 ... -> b ...", b=N[0])
+            batch[key] = repeat(value_dict["cond_frames"],
+                                "1 ... -> b ...", b=N[0])
         elif key == "cond_frames_without_noise":
             batch[key] = repeat(
                 value_dict["cond_frames_without_noise"], "1 ... -> b ...", b=N[0]
@@ -723,7 +755,8 @@ def do_img2img(
             with model.ema_scope():
                 load_model(model.conditioner)
                 batch, batch_uc = get_batch(
-                    get_unique_embedder_keys_from_conditioner(model.conditioner),
+                    get_unique_embedder_keys_from_conditioner(
+                        model.conditioner),
                     value_dict,
                     [num_samples],
                 )
@@ -735,7 +768,8 @@ def do_img2img(
                 )
                 unload_model(model.conditioner)
                 for k in c:
-                    c[k], uc[k] = map(lambda y: y[k][:num_samples].to("cuda"), (c, uc))
+                    c[k], uc[k] = map(
+                        lambda y: y[k][:num_samples].to("cuda"), (c, uc))
 
                 for k in additional_kwargs:
                     c[k] = uc[k] = additional_kwargs[k]
@@ -777,7 +811,8 @@ def do_img2img(
                 load_model(model.first_stage_model)
                 samples_x = model.decode_first_stage(samples_z)
                 unload_model(model.first_stage_model)
-                samples = torch.clamp((samples_x + 1.0) / 2.0, min=0.0, max=1.0)
+                samples = torch.clamp(
+                    (samples_x + 1.0) / 2.0, min=0.0, max=1.0)
 
                 if filter is not None:
                     samples = filter(samples)
@@ -863,7 +898,8 @@ def save_video_as_grid_and_mp4(
     video_batch = rearrange(video_batch, "(b t) c h w -> b t c h w", t=T)
     video_batch = embed_watermark(video_batch)
     for vid in video_batch:
-        save_image(vid, fp=os.path.join(save_path, f"{base_count:06d}.png"), nrow=4)
+        save_image(vid, fp=os.path.join(
+            save_path, f"{base_count:06d}.png"), nrow=4)
 
         video_path = os.path.join(save_path, f"{base_count:06d}.mp4")
 
@@ -875,7 +911,8 @@ def save_video_as_grid_and_mp4(
         )
 
         vid = (
-            (rearrange(vid, "t c h w -> t h w c") * 255).cpu().numpy().astype(np.uint8)
+            (rearrange(vid, "t c h w -> t h w c")
+             * 255).cpu().numpy().astype(np.uint8)
         )
         for frame in vid:
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
