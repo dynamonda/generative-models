@@ -157,7 +157,6 @@ def run_txt2img(
 
         # プロンプト記録
         if prompt_logger:
-            prompt_logger = PromptLogger()
             prompt_logger.append(f"**Model I:** {version}")
             prompt_logger.append(f"**Sampler:** {sampler}")
             prompt_logger.append(f"**(H, W, C, F) =** ({H}, {W}, {C}, {F})")
@@ -397,6 +396,8 @@ if __name__ == "__main__":
         raise ValueError(f"unknown mode {mode}")
 
     st.write(f"type(out)={type(out)}")
+    if prompt_logger:
+        st.write(f"prompt_logger:\n{prompt_logger.get_log_newlines()}")
 
     if isinstance(out, (tuple, list)):
         samples, samples_z = out
