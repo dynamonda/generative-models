@@ -2,6 +2,7 @@ import logging
 import math
 from inspect import isfunction
 from typing import Any, Optional
+from omegaconf import ListConfig
 
 import torch
 import torch.nn.functional as F
@@ -647,6 +648,10 @@ class SpatialTransformer(nn.Module):
             f"{in_channels} channels and {n_heads} heads."
         )
 
+        # Fix from Issue
+        # https://github.com/Stability-AI/generative-models/issues/162#issuecomment-1871837287
+        if exists(context_dim) and isinstance(context_dim, ListConfig):
+            context_dim = list(context_dim)
         if exists(context_dim) and not isinstance(context_dim, list):
             context_dim = [context_dim]
         if exists(context_dim) and isinstance(context_dim, list):
